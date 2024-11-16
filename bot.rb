@@ -157,7 +157,7 @@ Telegram::Bot::Client.run(ENV.fetch("TELEGRAM_BOT_API_TOKEN")) do |bot|
           chat_id: message.chat.id,
           text: response
         )
-        return
+        next
       end
       
       # Original URL handling logic
@@ -191,7 +191,7 @@ Telegram::Bot::Client.run(ENV.fetch("TELEGRAM_BOT_API_TOKEN")) do |bot|
         save_message(message.from.id, message.text, 'user')
         history = get_conversation_history(message.from.id)
         prompt = "Previous conversation:\n#{history}\n\nRespond to user's message: #{message.text}"
-        response = Llm.go(prompt: prompt)
+        response = Llm.go(prompt: prompt,model:"gemini-1.5-flash-8b")
         save_message(message.from.id, response, 'assistant')
         bot.api.send_message(chat_id: message.chat.id, text: response)
       end
