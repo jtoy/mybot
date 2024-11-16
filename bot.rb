@@ -4,6 +4,7 @@ require 'dotenv/load'
 require 'nokogiri'
 require 'ostruct'
 require 'http'
+require './llm'
 
 class Link < ActiveRecord::Base
   validates :url, presence: true, format: URI::regexp(%w[http https])
@@ -75,7 +76,7 @@ Telegram::Bot::Client.run(ENV.fetch("TELEGRAM_BOT_API_TOKEN")) do |bot|
     else
       parts = message.text.split(' ')
       url = parts.find { |part| part.match(URL_REGEX) }
-      notes = parts.reject { |part| part.match(URL_REGEX) }.join(' ')
+      
       if url
         existing_link = Link.find_by(url: url)
         if existing_link
@@ -83,6 +84,7 @@ Telegram::Bot::Client.run(ENV.fetch("TELEGRAM_BOT_API_TOKEN")) do |bot|
         else
           o = Fetcher.fetch(url) rescue nil
           puts o.inspect
+          notes = parts.reject { |part| part.match(URL_REGEX) }.join(' ')
           link = Link.new(url: url,title:o.title,user_id: message.from.id,notes:notes)
           if link.save
             bot.api.send_message(chat_id: message.chat.id, text: "Link saved!")
@@ -90,6 +92,9 @@ Telegram::Bot::Client.run(ENV.fetch("TELEGRAM_BOT_API_TOKEN")) do |bot|
             bot.api.send_message(chat_id: message.chat.id, text: "Invalid link. #{link.errors}")
           end
         end
+      else
+        response = Llm.go(prompt: "Respond to user's message: #{message.text}")
+        bot.api.send_message(chat_id: message.chat.id, text: response)
       end
     end
   end
