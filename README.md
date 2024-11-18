@@ -5,5 +5,5 @@ add source code
 add grounding of my docs
 add strategic partner ability
 add personality
-add push to deploy
-
+add push to deploy, just move to a server
+trello support

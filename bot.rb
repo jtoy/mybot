@@ -212,7 +212,7 @@ Telegram::Bot::Client.run(ENV.fetch("TELEGRAM_BOT_API_TOKEN")) do |bot|
       else
         save_message(message.from.id, message.text, 'user')
         history = get_conversation_history(message.from.id)
-        prompt = "Respond as a helpful chief of staff. Previous conversation:\n#{history}\n\nUser's message: #{message.text}"
+        prompt = "Respond as a helpful chief of staff. Previous conversation:\n#{history}\n\nUser's message: #{message.text}\n\nOnly give the response"
         #response = Llm.go(prompt: prompt,model:"gemini-1.5-flash-8b")
         response = Llm.go(prompt: prompt,model:"llama3.2",service: :local)
         save_message(message.from.id, response, 'assistant')
