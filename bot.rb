@@ -6,6 +6,7 @@ require 'ostruct'
 require 'http'
 require './llm'
 require 'rufus-scheduler'
+require 'optparse'
 
 class Link < ActiveRecord::Base
   validates :url, presence: true, format: URI::regexp(%w[http https])
@@ -136,6 +137,27 @@ end
 
 URL_REGEX = %r{https?://[\S]+}
 Telegram::Bot::Client.run(ENV.fetch("TELEGRAM_BOT_API_TOKEN")) do |bot|
+  options = {}
+  OptionParser.new do |opts|
+    opts.banner = "Usage: ruby bot.rb [-m message]"
+    opts.on("-m", "--message MESSAGE", "Send immediate message to first user") do |message|
+      options[:message] = message
+    end
+  end.parse!
+
+  if options[:message]
+    first_user = Message.first&.user_id
+    if first_user
+      bot.api.send_message(
+        chat_id: first_user,
+        text: options[:message]
+      )
+      puts "Message sent to user #{first_user}"
+    else
+      puts "No users found in messages table"
+    end
+  end
+
   bot.listen do |message|
     case message.text
     when '/start'
