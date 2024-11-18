@@ -109,6 +109,13 @@ def ask_for_intention(bot, chat_id)
     text: "Good morning! What is your intention for today?"
   )
 end
+def get_current_model
+  File.exist?('.model') ? File.read('.model').strip : 'llama3.2'
+end
+
+def set_model(model_name)
+  File.write('.model', model_name)
+end
 
 def make_suggestion(bot, chat_id, intention)
   return unless intention
@@ -236,12 +243,5 @@ Telegram::Bot::Client.run(ENV.fetch("TELEGRAM_BOT_API_TOKEN")) do |bot|
   end
 end
 
-def get_current_model
-  File.exist?('.model') ? File.read('.model').strip : 'llama3.2'
-end
-
-def set_model(model_name)
-  File.write('.model', model_name)
-end
 
 
