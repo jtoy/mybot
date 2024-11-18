@@ -168,6 +168,21 @@ Telegram::Bot::Client.run(ENV.fetch("TELEGRAM_BOT_API_TOKEN")) do |bot|
       )
     when '/list'
       list_links(message, bot)
+    when /^\/model(?:\s+(.+))?$/
+      model_name = $1&.strip
+      if model_name
+        set_model(model_name)
+        bot.api.send_message(
+          chat_id: message.chat.id,
+          text: "Model set to: #{model_name}"
+        )
+      else
+        current_model = get_current_model
+        bot.api.send_message(
+          chat_id: message.chat.id,
+          text: "Current model: #{current_model}"
+        )
+      end
     else
       # Store intention if it was just requested
       if $user_intentions[message.chat.id].nil?
@@ -213,13 +228,20 @@ Telegram::Bot::Client.run(ENV.fetch("TELEGRAM_BOT_API_TOKEN")) do |bot|
         save_message(message.from.id, message.text, 'user')
         history = get_conversation_history(message.from.id)
         prompt = "Respond as a helpful chief of staff. Previous conversation:\n#{history}\n\nUser's message: #{message.text}\n\nOnly give the response"
-        #response = Llm.go(prompt: prompt,model:"gemini-1.5-flash-8b")
-        response = Llm.go(prompt: prompt,model:"llama3.2",service: :local)
+        response = Llm.go(prompt: prompt, model: get_current_model, service: :local)
         save_message(message.from.id, response, 'assistant')
         bot.api.send_message(chat_id: message.chat.id, text: response)
       end
     end
   end
+end
+
+def get_current_model
+  File.exist?('.model') ? File.read('.model').strip : 'llama3.2'
+end
+
+def set_model(model_name)
+  File.write('.model', model_name)
 end
 
 
