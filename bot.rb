@@ -129,6 +129,12 @@ def make_suggestion(bot, chat_id, intention)
   )
 end
 
+def generate_motivational_quote(user_id)
+  history = get_conversation_history(user_id)
+  prompt = "Based on this conversation history:\n#{history}\n\nGenerate ONE short, inspiring quote (2-3 sentences max) that relates to what we've been discussing. If there's no clear context, provide a general motivational quote about growth and progress."
+  Llm.go(prompt: prompt, model: get_current_model)
+end
+
 # Schedule daily intention check at 8:30 AM
 scheduler.cron '30 8 * * *' do
   $user_intentions.keys.each do |chat_id|
@@ -139,6 +145,16 @@ end
 scheduler.cron "30 11 * * *" do
   $user_intentions.each do |chat_id, intention|
     make_suggestion(bot, chat_id, intention)
+  end
+end
+
+scheduler.cron '0 */8 * * *' do  # Runs every 8 hours
+  Message.distinct.pluck(:user_id).each do |user_id|
+    quote = generate_motivational_quote(user_id)
+    bot.api.send_message(
+      chat_id: user_id,
+      text: "💭 #{quote}"
+    )
   end
 end
 
