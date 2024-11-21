@@ -248,6 +248,24 @@ Telegram::Bot::Client.run(ENV.fetch("TELEGRAM_BOT_API_TOKEN")) do |bot|
           text: "Current model: #{current_model}"
         )
       end
+    when '/test_schedule'
+      bot.api.send_message(
+        chat_id: message.chat.id,
+        text: "Testing scheduled messages..."
+      )
+      
+      # Test intention check
+      ask_for_intention(bot, message.chat.id)
+      
+      # Test suggestion
+      make_suggestion(bot, message.chat.id, $user_intentions[message.chat.id])
+      
+      # Test quote
+      quote = generate_motivational_quote(message.from.id)
+      bot.api.send_message(
+        chat_id: message.chat.id,
+        text: "💭 #{quote}"
+      )
     else
       # Store intention if it was just requested
       if $user_intentions[message.chat.id].nil?
