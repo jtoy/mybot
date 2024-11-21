@@ -105,19 +105,26 @@ def list_trello_tickets(message, bot)
   # TRELLO_BOARD_ID=your_board_id
   
   begin
-    response = HTTP.auth("key=#{ENV['TRELLO_KEY']}&token=#{ENV['TRELLO_TOKEN']}")
-                   .get("https://api.trello.com/1/boards/ArIrEAMo/cards")
-    
-    cards = JSON.parse(response.body)
-    
-    if cards.any?
-      response_text = "📋 *Trello Tickets:*\n\n"
-      cards.each do |card|
-        response_text += "• *#{card['name']}*\n#{card['desc']}\n\n"
-      end
-    else
-      response_text = "No tickets found on the board."
+    Trello.configure do |config|
+      config.developer_public_key = ENV['TRELLO_KEY']
+      config.member_token = ENV['TRELLO_MEMBER_TOKEN']
     end
+    board_id = "ArIrEAMo"
+    board = Trello::Board.find(board_id)
+
+    response_text = "Board: #{board.name}\n"
+
+    # Fetch and iterate through all lists and their cards
+    board.lists.each do |list|
+      response_text << "  List: #{list.name}\n"
+
+      list.cards.each do |card|
+        response_text << "    Card: #{card.name}\n"
+        response_text << "    Description: #{card.desc}\n" unless card.desc.empty?
+      end
+    end
+
+
     
   rescue => e
     response_text = "Error fetching Trello tickets: #{e.message}"
