@@ -7,6 +7,7 @@ require 'http'
 require './llm'
 require 'rufus-scheduler'
 require 'optparse'
+require 'ruby-trello'
 
 class Link < ActiveRecord::Base
   validates :url, presence: true, format: URI::regexp(%w[http https])
@@ -95,6 +96,38 @@ def list_links(message, bot)
   end
 
   bot.api.send_message(chat_id: message.chat.id, text: response)
+end
+
+def list_trello_tickets(message, bot)
+  # You'll need to configure Trello API credentials in your .env file
+  # TRELLO_KEY=your_key
+  # TRELLO_TOKEN=your_token
+  # TRELLO_BOARD_ID=your_board_id
+  
+  begin
+    response = HTTP.auth("key=#{ENV['TRELLO_KEY']}&token=#{ENV['TRELLO_TOKEN']}")
+                   .get("https://api.trello.com/1/boards/ArIrEAMo/cards")
+    
+    cards = JSON.parse(response.body)
+    
+    if cards.any?
+      response_text = "📋 *Trello Tickets:*\n\n"
+      cards.each do |card|
+        response_text += "• *#{card['name']}*\n#{card['desc']}\n\n"
+      end
+    else
+      response_text = "No tickets found on the board."
+    end
+    
+  rescue => e
+    response_text = "Error fetching Trello tickets: #{e.message}"
+  end
+
+  bot.api.send_message(
+    chat_id: message.chat.id,
+    text: response_text,
+    parse_mode: 'Markdown'
+  )
 end
 
 # Initialize scheduler
@@ -191,6 +224,8 @@ Telegram::Bot::Client.run(ENV.fetch("TELEGRAM_BOT_API_TOKEN")) do |bot|
       )
     when '/list'
       list_links(message, bot)
+    when '/trello'
+      list_trello_tickets(message, bot)
     when /^\/model(?:\s+(.+))?$/
       model_name = $1&.strip
       if model_name
