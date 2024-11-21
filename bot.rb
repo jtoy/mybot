@@ -266,6 +266,31 @@ Telegram::Bot::Client.run(ENV.fetch("TELEGRAM_BOT_API_TOKEN")) do |bot|
         chat_id: message.chat.id,
         text: "💭 #{quote}"
       )
+    when /^\/intention(?:\s+(.+))?$/
+      chat_id = message.chat.id
+      intention_text = $1&.strip  # Capture any text after /intention
+
+      if intention_text
+        # Set new intention
+        $user_intentions[chat_id] = intention_text
+        bot.api.send_message(
+          chat_id: chat_id,
+          text: "✅ Your intention has been set to: #{intention_text}"
+        )
+      else
+        # Show current intention
+        current_intention = $user_intentions[chat_id]
+        response = if current_intention
+          "Your current intention is: #{current_intention}"
+        else
+          "You haven't set an intention yet. Use /intention <your intention> to set one."
+        end
+        
+        bot.api.send_message(
+          chat_id: chat_id,
+          text: response
+        )
+      end
     else
       # Store intention if it was just requested
       if $user_intentions[message.chat.id].nil?
