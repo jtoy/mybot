@@ -7,7 +7,7 @@ require 'http'
 require './llm'
 require 'rufus-scheduler'
 require 'optparse'
-require 'ruby-trello'
+require 'trello'
 
 class Link < ActiveRecord::Base
   validates :url, presence: true, format: URI::regexp(%w[http https])
