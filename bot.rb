@@ -98,6 +98,16 @@ def list_links(message, bot)
   bot.api.send_message(chat_id: message.chat.id, text: response)
 end
 
+def load_grounding_docs
+  return "" unless Dir.exist?('docs')
+  
+  docs = []
+  Dir.glob('docs/*').each do |file|
+    docs << "#{File.basename(file)}\n\n#{File.read(file)}"
+  end
+  "background information: \n\n"+docs.join("\n\n") +"\n\n"
+end
+
 def list_trello_tickets(message, bot)
   # You'll need to configure Trello API credentials in your .env file
   # TRELLO_KEY=your_key
@@ -335,7 +345,8 @@ Telegram::Bot::Client.run(ENV.fetch("TELEGRAM_BOT_API_TOKEN")) do |bot|
       else
         save_message(message.from.id, message.text, 'user')
         history = get_conversation_history(message.from.id)
-        prompt = "Respond as a helpful chief of staff. Previous conversation:\n#{history}\n\nUser's message: #{message.text}\n\nOnly give the response"
+        grounding_docs = load_grounding_docs
+        prompt = "#{grounding_docs}\n\nRespond as a helpful chief of staff. Previous conversation:\n#{history}\n\nUser's message: #{message.text}\n\nOnly give the response"
         response = Llm.go(prompt: prompt, model: get_current_model, service: :local)
         save_message(message.from.id, response, 'assistant')
         bot.api.send_message(chat_id: message.chat.id, text: response)
@@ -343,6 +354,8 @@ Telegram::Bot::Client.run(ENV.fetch("TELEGRAM_BOT_API_TOKEN")) do |bot|
     end
   end
 end
+
+
 
 
 
