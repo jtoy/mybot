@@ -8,6 +8,7 @@ require './llm'
 require 'rufus-scheduler'
 require 'optparse'
 require 'trello'
+require 'byebug'
 
 class Link < ActiveRecord::Base
   validates :url, presence: true, format: URI::regexp(%w[http https])
@@ -210,6 +211,13 @@ end
 
 URL_REGEX = %r{https?://[\S]+}
 Telegram::Bot::Client.run(ENV.fetch("TELEGRAM_BOT_API_TOKEN")) do |bot|
+  # Display connection info
+  bot_info = bot.api.get_me
+  puts "Bot started successfully!"
+  puts "Bot username: @#{bot_info.username}"
+  puts "Bot ID: #{bot_info.id}"
+  puts "Bot is ready to receive messages..."
+
   options = {}
   OptionParser.new do |opts|
     opts.banner = "Usage: ruby bot.rb [-m message]"
