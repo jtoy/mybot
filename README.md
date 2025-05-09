@@ -1,4 +1,14 @@
 
+write spec of the book coach
+turn chatbot into book coach
+auto deploy
+dev_bot
+staging_bot
+prod_bot
+
+
+
+
 make code public
 add search
 add model switcher 
