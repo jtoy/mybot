@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Replace 'ruby bot.rb' with your command
-COMMAND="ruby bot.rb"
+COMMAND="bundle exec ruby bot.rb"
 UPDATED_COMMAND="ruby bot.rb -m 'my code has been updated!'"
 GIT_CHECK_INTERVAL=1800  # 30 minutes in seconds
 RESTART_FLAG=false
