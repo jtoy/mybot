@@ -21,3 +21,9 @@ add push to deploy, just move to a server
 add trello support to read tickets
 add ability to change personality
 send links
+
+
+
+#console
+irb -r ./bot.rb
+pry -r ./bot.rb
