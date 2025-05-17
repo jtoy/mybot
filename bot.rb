@@ -210,157 +210,165 @@ scheduler.cron '0 */8 * * *' do  # Runs every 8 hours
 end
 
 URL_REGEX = %r{https?://[\S]+}
-Telegram::Bot::Client.run(ENV.fetch("TELEGRAM_BOT_API_TOKEN")) do |bot|
-  # Display connection info
-  bot_info = bot.api.get_me
-  puts "Bot started successfully!"
-  puts "Bot username: @#{bot_info.username}"
-  puts "Bot ID: #{bot_info.id}"
-  puts "Bot is ready to receive messages..."
 
-  options = {}
-  OptionParser.new do |opts|
-    opts.banner = "Usage: ruby bot.rb [-m message]"
-    opts.on("-m", "--message MESSAGE", "Send immediate message to first user") do |message|
-      options[:message] = message
-    end
-  end.parse!
+def run_bot
+  Telegram::Bot::Client.run(ENV.fetch("TELEGRAM_BOT_API_TOKEN")) do |bot|
+    # Display connection info
+    bot_info = bot.api.get_me
+    puts "Bot started successfully!"
+    puts "Bot username: @#{bot_info.username}"
+    puts "Bot ID: #{bot_info.id}"
+    puts "Bot is ready to receive messages..."
 
-  if options[:message]
-    first_user = Message.first&.user_id
-    if first_user
-      bot.api.send_message(
-        chat_id: first_user,
-        text: options[:message]
-      )
-      puts "Message sent to user #{first_user}"
-    else
-      puts "No users found in messages table"
-    end
-  end
-
-  bot.listen do |message|
-    case message.text
-    when '/start'
-      $user_intentions[message.chat.id] = nil
-      bot.api.send_message(
-        chat_id: message.chat.id,
-        text: "Welcome! I'll ask for your daily intention at 8:30 AM and provide suggestions throughout the day."
-      )
-    when '/list'
-      list_links(message, bot)
-    when '/trello'
-      list_trello_tickets(message, bot)
-    when /^\/model(?:\s+(.+))?$/
-      model_name = $1&.strip
-      if model_name
-        set_model(model_name)
-        bot.api.send_message(
-          chat_id: message.chat.id,
-          text: "Model set to: #{model_name}"
-        )
-      else
-        current_model = get_current_model
-        bot.api.send_message(
-          chat_id: message.chat.id,
-          text: "Current model: #{current_model}"
-        )
+    options = {}
+    OptionParser.new do |opts|
+      opts.banner = "Usage: ruby bot.rb [-m message]"
+      opts.on("-m", "--message MESSAGE", "Send immediate message to first user") do |message|
+        options[:message] = message
       end
-    when '/test_schedule'
-      bot.api.send_message(
-        chat_id: message.chat.id,
-        text: "Testing scheduled messages..."
-      )
-      
-      # Test intention check
-      ask_for_intention(bot, message.chat.id)
-      
-      # Test suggestion
-      make_suggestion(bot, message.chat.id, $user_intentions[message.chat.id])
-      
-      # Test quote
-      quote = generate_motivational_quote(message.from.id)
-      bot.api.send_message(
-        chat_id: message.chat.id,
-        text: "💭 #{quote}"
-      )
-    when /^\/intention(?:\s+(.+))?$/
-      chat_id = message.chat.id
-      intention_text = $1&.strip  # Capture any text after /intention
+    end.parse!
 
-      if intention_text
-        # Set new intention
-        $user_intentions[chat_id] = intention_text
+    if options[:message]
+      first_user = Message.first&.user_id
+      if first_user
         bot.api.send_message(
-          chat_id: chat_id,
-          text: "✅ Your intention has been set to: #{intention_text}"
+          chat_id: first_user,
+          text: options[:message]
         )
+        puts "Message sent to user #{first_user}"
       else
-        # Show current intention
-        current_intention = $user_intentions[chat_id]
-        response = if current_intention
-          "Your current intention is: #{current_intention}"
+        puts "No users found in messages table"
+      end
+    end
+
+    bot.listen do |message|
+      case message.text
+      when '/start'
+        $user_intentions[message.chat.id] = nil
+        bot.api.send_message(
+          chat_id: message.chat.id,
+          text: "Welcome! I'll ask for your daily intention at 8:30 AM and provide suggestions throughout the day."
+        )
+      when '/list'
+        list_links(message, bot)
+      when '/trello'
+        list_trello_tickets(message, bot)
+      when /^\/model(?:\s+(.+))?$/
+        model_name = $1&.strip
+        if model_name
+          set_model(model_name)
+          bot.api.send_message(
+            chat_id: message.chat.id,
+            text: "Model set to: #{model_name}"
+          )
         else
-          "You haven't set an intention yet. Use /intention <your intention> to set one."
+          current_model = get_current_model
+          bot.api.send_message(
+            chat_id: message.chat.id,
+            text: "Current model: #{current_model}"
+          )
+        end
+      when '/test_schedule'
+        bot.api.send_message(
+          chat_id: message.chat.id,
+          text: "Testing scheduled messages..."
+        )
+        
+        # Test intention check
+        ask_for_intention(bot, message.chat.id)
+        
+        # Test suggestion
+        make_suggestion(bot, message.chat.id, $user_intentions[message.chat.id])
+        
+        # Test quote
+        quote = generate_motivational_quote(message.from.id)
+        bot.api.send_message(
+          chat_id: message.chat.id,
+          text: "💭 #{quote}"
+        )
+      when /^\/intention(?:\s+(.+))?$/
+        chat_id = message.chat.id
+        intention_text = $1&.strip  # Capture any text after /intention
+
+        if intention_text
+          # Set new intention
+          $user_intentions[chat_id] = intention_text
+          bot.api.send_message(
+            chat_id: chat_id,
+            text: "✅ Your intention has been set to: #{intention_text}"
+          )
+        else
+          # Show current intention
+          current_intention = $user_intentions[chat_id]
+          response = if current_intention
+            "Your current intention is: #{current_intention}"
+          else
+            "You haven't set an intention yet. Use /intention <your intention> to set one."
+          end
+          
+          bot.api.send_message(
+            chat_id: chat_id,
+            text: response
+          )
+        end
+      else
+        # Store intention if it was just requested
+        if $user_intentions[message.chat.id].nil?
+          $user_intentions[message.chat.id] = message.text
+          response = "Thank you! I'll help you work towards: #{message.text}"
+          save_message(message.from.id, message.text, 'user')
+          save_message(message.from.id, response, 'assistant')
+          bot.api.send_message(
+            chat_id: message.chat.id,
+            text: response
+          )
+          next
         end
         
-        bot.api.send_message(
-          chat_id: chat_id,
-          text: response
-        )
-      end
-    else
-      # Store intention if it was just requested
-      if $user_intentions[message.chat.id].nil?
-        $user_intentions[message.chat.id] = message.text
-        response = "Thank you! I'll help you work towards: #{message.text}"
-        save_message(message.from.id, message.text, 'user')
-        save_message(message.from.id, response, 'assistant')
-        bot.api.send_message(
-          chat_id: message.chat.id,
-          text: response
-        )
-        next
-      end
-      
-      # Original URL handling logic
-      parts = message.text.split(' ')
-      url = parts.find { |part| part.match(URL_REGEX) }
-      
-      if url
-        existing_link = Link.find_by(url: url)
-        save_message(message.from.id, message.text, 'user')
+        # Original URL handling logic
+        parts = message.text.split(' ')
+        url = parts.find { |part| part.match(URL_REGEX) }
         
-        if existing_link
-          response = "Duplicate link found!\nTitle: #{existing_link.title}\nNotes: #{existing_link.notes}"
-          save_message(message.from.id, response, 'assistant')
-          bot.api.send_message(chat_id: message.chat.id, text: response)
-        else
-          o = Fetcher.fetch(url) rescue nil
-          puts o.inspect
-          notes = parts.reject { |part| part.match(URL_REGEX) }.join(' ')
-          link = Link.new(url: url,title:o.title,user_id: message.from.id,notes:notes)
-          if link.save
-            response = "Link saved!"
+        if url
+          existing_link = Link.find_by(url: url)
+          save_message(message.from.id, message.text, 'user')
+          
+          if existing_link
+            response = "Duplicate link found!\nTitle: #{existing_link.title}\nNotes: #{existing_link.notes}"
             save_message(message.from.id, response, 'assistant')
             bot.api.send_message(chat_id: message.chat.id, text: response)
           else
-            response = "Invalid link. #{link.errors}"
-            save_message(message.from.id, response, 'assistant')
-            bot.api.send_message(chat_id: message.chat.id, text: response)
+            o = Fetcher.fetch(url) rescue nil
+            puts o.inspect
+            notes = parts.reject { |part| part.match(URL_REGEX) }.join(' ')
+            link = Link.new(url: url,title:o.title,user_id: message.from.id,notes:notes)
+            if link.save
+              response = "Link saved!"
+              save_message(message.from.id, response, 'assistant')
+              bot.api.send_message(chat_id: message.chat.id, text: response)
+            else
+              response = "Invalid link. #{link.errors}"
+              save_message(message.from.id, response, 'assistant')
+              bot.api.send_message(chat_id: message.chat.id, text: response)
+            end
           end
+        else
+          save_message(message.from.id, message.text, 'user')
+          history = get_conversation_history(message.from.id)
+          grounding_docs = load_grounding_docs
+          prompt = "#{grounding_docs}\n\nRespond as a helpful chief of staff. Previous conversation:\n#{history}\n\nUser's message: #{message.text}\n\nOnly give the response"
+          response = Llm.go(prompt: prompt, model: get_current_model, service: :local)
+          save_message(message.from.id, response, 'assistant')
+          bot.api.send_message(chat_id: message.chat.id, text: response)
         end
-      else
-        save_message(message.from.id, message.text, 'user')
-        history = get_conversation_history(message.from.id)
-        grounding_docs = load_grounding_docs
-        prompt = "#{grounding_docs}\n\nRespond as a helpful chief of staff. Previous conversation:\n#{history}\n\nUser's message: #{message.text}\n\nOnly give the response"
-        response = Llm.go(prompt: prompt, model: get_current_model, service: :local)
-        save_message(message.from.id, response, 'assistant')
-        bot.api.send_message(chat_id: message.chat.id, text: response)
       end
     end
   end
+end
+
+# Only run the bot when this file is executed directly
+if __FILE__ == $0
+  run_bot
 end
 
 
