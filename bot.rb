@@ -148,9 +148,6 @@ def list_trello_tickets(message, bot)
   )
 end
 
-# Initialize scheduler
-scheduler = Rufus::Scheduler.new
-
 # Store user intentions
 $user_intentions = {}
 
@@ -160,6 +157,7 @@ def ask_for_intention(bot, chat_id)
     text: "Good morning! What is your intention for today?"
   )
 end
+
 def get_current_model
   File.exist?('.model') ? File.read('.model').strip : 'llama3.2'
 end
@@ -186,29 +184,6 @@ def generate_motivational_quote(user_id)
   Llm.go(prompt: prompt, service: :local, model: "gemma3:12b" )
 end
 
-# Schedule daily intention check at 8:30 AM
-scheduler.cron '30 8 * * *' do
-  $user_intentions.keys.each do |chat_id|
-    ask_for_intention(bot, chat_id)
-  end
-end
-
-scheduler.cron "30 11 * * *" do
-  $user_intentions.each do |chat_id, intention|
-    make_suggestion(bot, chat_id, intention)
-  end
-end
-
-scheduler.cron '0 */8 * * *' do  # Runs every 8 hours
-  Message.distinct.pluck(:user_id).each do |user_id|
-    quote = generate_motivational_quote(user_id)
-    bot.api.send_message(
-      chat_id: user_id,
-      text: "💭 #{quote}"
-    )
-  end
-end
-
 URL_REGEX = %r{https?://[\S]+}
 
 def run_bot
@@ -219,6 +194,32 @@ def run_bot
     puts "Bot username: @#{bot_info.username}"
     puts "Bot ID: #{bot_info.id}"
     puts "Bot is ready to receive messages..."
+
+    # Initialize scheduler inside the bot context
+    scheduler = Rufus::Scheduler.new
+
+    # Schedule daily intention check at 8:30 AM
+    scheduler.cron '30 8 * * *' do
+      $user_intentions.keys.each do |chat_id|
+        ask_for_intention(bot, chat_id)
+      end
+    end
+
+    scheduler.cron "30 11 * * *" do
+      $user_intentions.each do |chat_id, intention|
+        make_suggestion(bot, chat_id, intention)
+      end
+    end
+
+    scheduler.cron '0 */8 * * *' do  # Runs every 8 hours
+      Message.distinct.pluck(:user_id).each do |user_id|
+        quote = generate_motivational_quote(user_id)
+        bot.api.send_message(
+          chat_id: user_id,
+          text: "💭 #{quote}"
+        )
+      end
+    end
 
     options = {}
     OptionParser.new do |opts|
