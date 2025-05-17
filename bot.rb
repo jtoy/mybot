@@ -183,7 +183,7 @@ end
 def generate_motivational_quote(user_id)
   history = get_conversation_history(user_id)
   prompt = "Based on this conversation history:\n#{history}\n\nGenerate ONE short, inspiring quote (2-3 sentences max) that relates to what we've been discussing. If there's no clear context, provide a general motivational quote about growth and progress."
-  Llm.go(prompt: prompt, model: get_current_model)
+  Llm.go(prompt: prompt, service: :local, model: "gemma3:12b" )
 end
 
 # Schedule daily intention check at 8:30 AM
